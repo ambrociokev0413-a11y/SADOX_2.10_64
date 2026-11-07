@@ -1,3 +1,5 @@
+name: Build SDX ARM64
+
 on:
   push:
     branches:
@@ -10,6 +12,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-24.04
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,22 +23,31 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Install Android NDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "sdkmanager not found"
+            exit 1
+          fi
+          yes | "$SDKMANAGER" --licenses
+          "$SDKMANAGER" --install "ndk;27.2.12479018"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
 
-      - name: Install NDK
-        run: sdkmanager 'ndk;27.2.12479018'
-
-      - name: Extract and build
+      - name: Extract project ZIP
         run: |
           mkdir -p source
           unzip -q SDX_ARM64_Stage1_GitHub_Actions_Ready.zip -d source
+          ls source
+
+      - name: Build ARM64 library
+        run: |
           ROOT="source/SDX_ARM64_Stage1_Native_Reconstruction"
           chmod +x "$ROOT/tools/"*.sh
-          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018"
           "$ROOT/tools/build_arm64.sh"
 
-      - name: Upload ARM64 artifact
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: SDX-ARM64-Stage1
