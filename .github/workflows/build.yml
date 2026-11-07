@@ -1,6 +1,7 @@
-name: Build SDX ARM64
-
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
